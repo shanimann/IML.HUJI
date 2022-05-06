@@ -24,7 +24,8 @@ def split_train_test(X: pd.DataFrame, y: pd.Series,
     train_X : DataFrame of shape (ceil(train_proportion * n_samples), n_features)
         Design matrix of train set
 
-    train_y : Series of shape (ceil(train_proportion * n_samples), )
+    train_y : Series of shape (ceil(train_proportion * n_samples), )git checkout -b GreenGilad-main main
+git pull https://github.com/GreenGilad/IML.HUJI.git main
         Responses of training samples
 
     test_X : DataFrame of shape (floor((1-train_proportion) * n_samples), n_features)
