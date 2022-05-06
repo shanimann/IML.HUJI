@@ -2,6 +2,7 @@ from typing import NoReturn
 from ...base import BaseEstimator
 import numpy as np
 from numpy.linalg import det, inv
+from IMLearn.metrics import misclassification_error
 
 
 class LDA(BaseEstimator):
@@ -25,6 +26,7 @@ class LDA(BaseEstimator):
     self.pi_: np.ndarray of shape (n_classes)
         The estimated class probabilities. To be set in `GaussianNaiveBayes.fit`
     """
+
     def __init__(self):
         """
         Instantiate an LDA classifier
@@ -46,7 +48,20 @@ class LDA(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+        self.classes_ = np.unique(y)
+        self.mu_ = np.zeros((self.classes_.shape[0], X.shape[1]))
+        self.pi_ = np.zeros((self.classes_.shape[0]))
+        cov_sum = 0
+        for k in self.classes_:
+            X_k = X[y == k]
+            self.pi_[k] = X_k.shape[0] / X.shape[0]
+            self.mu_[k] = np.mean(X_k, axis=0)
+            for x in X_k:
+                x = np.array([x])
+                cov_sum += (x - self.mu_[k]).T @ (x - self.mu_[k])
+        self.cov_ = cov_sum / X.shape[0]
+        self._cov_inv = inv(self.cov_)
+        self.fitted_ = True
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -62,7 +77,7 @@ class LDA(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
+        return np.argmax(self.likelihood(X), axis=1)
 
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
@@ -80,9 +95,23 @@ class LDA(BaseEstimator):
 
         """
         if not self.fitted_:
-            raise ValueError("Estimator must first be fitted before calling `likelihood` function")
-
-        raise NotImplementedError()
+            raise ValueError(
+                "Estimator must first be fitted before calling `likelihood` function")
+        likelihoods = np.array([])
+        for x_i in range(X.shape[0]):
+            temp_likelihood = np.array([])
+            for k in self.classes_:
+                sqrt = np.sqrt(
+                    np.power(2 * np.pi, X.shape[1]) * det(self.cov_))
+                normal_dist = np.exp(-0.5 * np.sum((X[x_i] - self.mu_[k]) @ self._cov_inv * (
+                            X[x_i] - self.mu_[k]))) / sqrt
+                likelihood = (normal_dist /sqrt) * self.pi_[k]
+                temp_likelihood = np.append(temp_likelihood, (likelihood))
+            if x_i == 0:
+                likelihoods = np.array(temp_likelihood)
+            else:
+                likelihoods = np.vstack((likelihoods, temp_likelihood))
+        return likelihoods
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -101,4 +130,4 @@ class LDA(BaseEstimator):
         loss : float
             Performance under missclassification loss function
         """
-        raise NotImplementedError()
+        return misclassification_error(y, self._predict(X))
